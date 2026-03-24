@@ -20,8 +20,11 @@ authors:
     orcid: "https://orcid.org/0000-0001-6165-7389"
     affiliation: "Northwest Missouri State University, USA"
 
-repository-code: "https://github.com/denisecase/cintel-05-drift-detection"
-url: "https://github.com/denisecase/cintel-05-drift-detection"
+  - family-names: Spornitz
+    given-names: Beth
+
+repository-code: "https://github.com/BethSpornitz/cintel-05-drift-detection"
+url: "https://github.com/BethSpornitz/cintel-05-drift-detection"
 license: MIT
 
 abstract: |
