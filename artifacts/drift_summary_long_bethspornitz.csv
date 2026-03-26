@@ -1,4 +1,4 @@
-field_name,field_value
+Metric,Value
 reference_avg_requests,128.3
 reference_avg_errors,2.3
 reference_avg_latency_ms,3835.0
@@ -11,3 +11,7 @@ latency_mean_difference_ms,1835.0
 requests_is_drifting_flag,True
 errors_is_drifting_flag,True
 latency_is_drifting_flag,True
+requests_drift_severity,high_drift
+errors_drift_severity,high_drift
+latency_drift_severity,high_drift
+overall_drift_status,attention_needed

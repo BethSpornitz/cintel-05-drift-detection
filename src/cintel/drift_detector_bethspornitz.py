@@ -233,6 +233,41 @@ def main() -> None:
         pl.col("latency_mean_difference_ms").abs() > LATENCY_DRIFT_THRESHOLD
     ).alias("latency_is_drifting_flag")
 
+    # -----------------------------
+    # NEW: STEP 5.2 DRIFT SEVERITY
+    # -----------------------------
+
+    requests_drift_severity_recipe: pl.Expr = (
+        pl.when(
+            pl.col("requests_mean_difference").abs() > (REQUESTS_DRIFT_THRESHOLD * 2)
+        )
+        .then(pl.lit("high_drift"))
+        .when(pl.col("requests_mean_difference").abs() > REQUESTS_DRIFT_THRESHOLD)
+        .then(pl.lit("moderate_drift"))
+        .otherwise(pl.lit("no_drift"))
+        .alias("requests_drift_severity")
+    )
+
+    errors_drift_severity_recipe: pl.Expr = (
+        pl.when(pl.col("errors_mean_difference").abs() > (ERRORS_DRIFT_THRESHOLD * 2))
+        .then(pl.lit("high_drift"))
+        .when(pl.col("errors_mean_difference").abs() > ERRORS_DRIFT_THRESHOLD)
+        .then(pl.lit("moderate_drift"))
+        .otherwise(pl.lit("no_drift"))
+        .alias("errors_drift_severity")
+    )
+
+    latency_drift_severity_recipe: pl.Expr = (
+        pl.when(
+            pl.col("latency_mean_difference_ms").abs() > (LATENCY_DRIFT_THRESHOLD * 2)
+        )
+        .then(pl.lit("high_drift"))
+        .when(pl.col("latency_mean_difference_ms").abs() > LATENCY_DRIFT_THRESHOLD)
+        .then(pl.lit("moderate_drift"))
+        .otherwise(pl.lit("no_drift"))
+        .alias("latency_drift_severity")
+    )
+
     # ----------------------------------------------------
     # STEP 5.1: APPLY THE DRIFT FLAG RECIPES TO EXPAND THE DATAFRAME
     # ----------------------------------------------------
@@ -241,6 +276,26 @@ def main() -> None:
             requests_is_drifting_flag_recipe,
             errors_is_drifting_flag_recipe,
             latency_is_drifting_flag_recipe,
+            requests_drift_severity_recipe,
+            errors_drift_severity_recipe,
+            latency_drift_severity_recipe,
+        ]
+    )
+
+    overall_drift_status_recipe: pl.Expr = (
+        pl.when(
+            (pl.col("requests_is_drifting_flag"))
+            | (pl.col("errors_is_drifting_flag"))
+            | (pl.col("latency_is_drifting_flag"))
+        )
+        .then(pl.lit("attention_needed"))
+        .otherwise(pl.lit("stable"))
+        .alias("overall_drift_status")
+    )
+
+    drift_df = drift_df.with_columns(
+        [
+            overall_drift_status_recipe,
         ]
     )
 
@@ -295,14 +350,18 @@ def main() -> None:
 
     drift_summary_long_df = pl.DataFrame(
         {
-            "field_name": list(drift_summary_dict.keys()),
-            "field_value": [str(value) for value in drift_summary_dict.values()],
+            "Metric": list(drift_summary_dict.keys()),
+            "Value": [str(value) for value in drift_summary_dict.values()],
         }
     )
     # ----------------------------------------------------
     # OPTIONAL STEP 7.1: SAVE THE LONG-FORM DRIFT SUMMARY AS AN ARTIFACT
     # ----------------------------------------------------
     drift_summary_long_df.write_csv(SUMMARY_LONG_FILE)
+
+    EXCEL_FILE: Final[Path] = ARTIFACTS_DIR / "drift_summary_bethspornitz.xlsx"
+    drift_summary_long_df.write_excel(EXCEL_FILE)
+    LOG.info(f"Wrote Excel summary file: {EXCEL_FILE}")
     LOG.info(f"Wrote long summary file: {SUMMARY_LONG_FILE}")
 
     LOG.info("========================")
